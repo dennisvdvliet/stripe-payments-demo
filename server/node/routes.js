@@ -139,15 +139,15 @@ router.post('/webhook', async (req, res) => {
     const source = object;
     console.log(`🔔  Webhook received! The source ${source.id} is chargeable.`);
     // Find the corresponding order this source is for by looking in its metadata.
-    const order = await orders.retrieve(source.metadata.order);
-    // Verify that this order actually needs to be paid.
-    if (
-      order.metadata.status === 'pending' ||
-      order.metadata.status === 'paid' ||
-      order.metadata.status === 'failed'
-    ) {
-      return res.sendStatus(403);
-    }
+    // const order = await orders.retrieve(source.metadata.order);
+    // // Verify that this order actually needs to be paid.
+    // if (
+    //   order.metadata.status === 'pending' ||
+    //   order.metadata.status === 'paid' ||
+    //   order.metadata.status === 'failed'
+    // ) {
+    //   return res.sendStatus(403);
+    // }
 
     // Note: We're setting an idempotency key below on the charge creation to
     // prevent any race conditions. It's set to the order ID, which protects us from
@@ -158,35 +158,34 @@ router.post('/webhook', async (req, res) => {
     // https://stripe.com/docs/sources/best-practices#charge-creation
 
     // Pay the order using the source we just received.
-    let charge, status;
+    let subscription, status;
+    console.log('dd');
     try {
-      charge = await stripe.charges.create(
+      subscription = await stripe.subscriptions.create(
         {
           source: source.id,
-          amount: order.amount,
-          currency: order.currency,
-          receipt_email: order.email,
-        },
-        {
-          // Set a unique idempotency key based on the order ID.
-          // This is to avoid any race conditions with your webhook handler.
-          idempotency_key: order.id,
+          customer: 'cus_BDqQILl8jamDOD',
+          items: [{plan: 'PLUS-SI-MONTH.1'}]
         }
       );
+      console.log(subscription);
+
     } catch (err) {
       // This is where you handle declines and errors.
       // For the demo, we simply set the status to mark the order as failed.
+      console.log(err);
       status = 'failed';
     }
-    if (charge && charge.status === 'succeeded') {
-      status = 'paid';
-    } else if (charge) {
-      status = charge.status;
-    } else {
-      status = 'failed';
-    }
+
+    // if (subscription && charge.status === 'succeeded') {
+    //   status = 'paid';
+    // } else if (charge) {
+    //   status = charge.status;
+    // } else {
+    //   status = 'failed';
+    // }
     // Update the order status based on the charge status.
-    await orders.update(order.id, {metadata: {status}});
+    //await orders.update(order.id, {metadata: {status}});
   }
 
   // Monitor `charge.succeeded` events.
@@ -198,9 +197,30 @@ router.post('/webhook', async (req, res) => {
     const charge = object;
     console.log(`🔔  Webhook received! The charge ${charge.id} succeeded.`);
     // Find the corresponding order this source is for by looking in its metadata.
-    const order = await orders.retrieve(charge.source.metadata.order);
+    console.log(charge);
+
+    stripe.sources.create({
+      type: "sepa_debit",
+      sepa_debit: {
+        ideal: charge.source.id
+      },
+      currency: "eur",
+      owner: {
+        name: "Dennis van der Vliet",
+      },
+    }, function(err, source) {
+      console.log(err);
+      console.log(source);
+      customer = stripe.customers.update(charge.customer, {source: source.id});
+      console.log(customer);
+      console.log('9️⃣');
+      // asynchronously called
+    });
+
+
+    //const order = await orders.retrieve(charge.source.metadata.order);
     // Update the order status to mark it as paid.
-    await orders.update(order.id, {metadata: {status: 'paid'}});
+    //await orders.update(order.id, {metadata: {status: 'paid'}});
   }
 
   // Monitor `source.failed`, `source.canceled`, and `charge.failed` events.

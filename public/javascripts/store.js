@@ -17,23 +17,19 @@ class Store {
 
   // Compute the total for the order based on the line items (SKUs and quantity).
   getOrderTotal() {
-    return Object.values(this.lineItems).reduce(
-      (total, {product, sku, quantity}) =>
-        total + quantity * this.products[product].skus.data[0].price,
-      0
-    );
+    return 984;
   }
 
   // Expose the line items for the order (in a way that is friendly to the Stripe Orders API).
   getOrderItems() {
     let items = [];
-    this.lineItems.forEach(item =>
-      items.push({
-        type: 'sku',
-        parent: item.sku,
-        quantity: item.quantity,
-      })
-    );
+    // this.lineItems.forEach(item =>
+    //   items.push({
+    //     type: 'sku',
+    //     parent: item.sku,
+    //     quantity: item.quantity,
+    //   })
+    // );
     return items;
   }
 
@@ -140,6 +136,7 @@ class Store {
   // Note: For simplicity, we're just using template strings to inject data in the DOM,
   // but in production you would typically use a library like React to manage this effectively.
   async displayOrderSummary() {
+    return null;
     // Fetch the products from the store to get all the details (name, price, etc.).
     await this.loadProducts();
     const orderItems = document.getElementById('order-items');
